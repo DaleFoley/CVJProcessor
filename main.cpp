@@ -7,6 +7,12 @@
 #include "helper.h"
 #include "strings.h"
 
+#include "cvj_parser.h"
+
+#include "cv_document.h"
+#include "cv_document_eight.h"
+#include "cv_document_eleven.h"
+
 int main(int argc, char *argv[])
 {
     try
@@ -20,11 +26,13 @@ int main(int argc, char *argv[])
         parser.addVersionOption();
 
         //Start of setting up command line parameters
-        QString sourceFileOptionDescription = QCoreApplication::translate("main", "The source file you want to copy to the target file.");
+        QString sourceFileOptionDescription = QCoreApplication::translate("main",
+                                                                          "The source file you want to copy to the target file.");
         QCommandLineOption sourceFileOption(strings::source, sourceFileOptionDescription, strings::source);
         parser.addOption(sourceFileOption);
 
-        QString targetFileOptionDescription = QCoreApplication::translate("main", "The end-result file with all the specified modifications.");
+        QString targetFileOptionDescription = QCoreApplication::translate("main",
+                                                                          "The end-result file with all the specified modifications.");
         QCommandLineOption targetFileOption(strings::target, targetFileOptionDescription, strings::target);
         parser.addOption(targetFileOption);
 
@@ -44,12 +52,14 @@ int main(int argc, char *argv[])
         QCommandLineOption customerNameOption(strings::customerName, customerNameOptionDescription, strings::customerName);
         parser.addOption(customerNameOption);
 
-        QString customerAddressOneOptionDescription = QCoreApplication::translate("main", "The customer address 1 to add to the target file.");
+        QString customerAddressOneOptionDescription = QCoreApplication::translate("main",
+                                                                                  "The customer address 1 to add to the target file.");
         QCommandLineOption customerAddressOneOption(strings::customerAddressOne, customerAddressOneOptionDescription,
                                                     strings::customerAddressOne);
         parser.addOption(customerAddressOneOption);
 
-        QString customerAddressTwoOptionDescription = QCoreApplication::translate("main", "The customer address 2 to add to the target file.");
+        QString customerAddressTwoOptionDescription = QCoreApplication::translate("main",
+                                                                                  "The customer address 2 to add to the target file.");
         QCommandLineOption customerAddressTwoOption(strings::customerAddressTwo, customerAddressTwoOptionDescription,
                                                     strings::customerAddressTwo);
         parser.addOption(customerAddressTwoOption);
@@ -179,31 +189,99 @@ int main(int argc, char *argv[])
             return -3;
         }
 
-        QString joineryValue = parser.value(joineryOption);
-        QString descriptionValue = parser.value(descriptionOption);
-        QString poValue = parser.value(poOption);
-        QString customerNameValue = parser.value(customerNameOption);
-        QString customerAddressOneValue = parser.value(customerAddressOneOption);
-        QString customerAddressTwoValue = parser.value(customerAddressTwoOption);
+        if(!helper::copy_over_existing_file(sourceFileValue, targetFileValue))
+        {
+            logMsg = "Failed to copy the source file [" + sourceFileValue + "] to the target path [" + targetFileValue + "]";
+
+            helper::output_message(logMsg);
+            helper::write_to_information_log(logMsg);
+
+            return -4;
+        }
+
+        QString joineryOptionValue = parser.value(joineryOption);
+        QString descriptionOptionValue = parser.value(descriptionOption);
+        QString poOptionValue = parser.value(poOption);
+        QString customerNameOptionValue = parser.value(customerNameOption);
+        QString customerAddressOneOptionValue = parser.value(customerAddressOneOption);
+        QString customerAddressTwoOptionValue = parser.value(customerAddressTwoOption);
         QString customerCityOptionValue = parser.value(customerCityOption);
-        QString customerEmailValue = parser.value(customerEmailOption);
-        QString customerStateValue = parser.value(customerStateOption);
-        QString customerZipValue = parser.value(customerZipOption);
-        QString customerPhoneValue = parser.value(customerPhoneOption);
-        QString customerMobileValue = parser.value(customerMobileOption);
-        QString customerFaxValue = parser.value(customerFaxOption);
-        QString customerCommentValue = parser.value(customerCommentOption);
-        QString shipToNameValue = parser.value(shipToNameOption);
-        QString shipToAddressOneValue = parser.value(shipToAddressOneOption);
-        QString shipToAddressTwoValue = parser.value(shipToAddressTwoOption);
-        QString shipToCityValue = parser.value(shipToCityOption);
-        QString shipToEmailValue = parser.value(shipToEmailOption);
-        QString shipToStateValue = parser.value(shipToStateOption);
-        QString shipToZipValue = parser.value(shipToZipOption);
-        QString shipToPhoneValue = parser.value(shipToPhoneOption);
-        QString shipToMobileValue = parser.value(shipToMobileOption);
-        QString shipToFaxValue = parser.value(shipToFaxOption);
-        QString shipToCommentValue = parser.value(shipToCommentOption);
+        QString customerEmailOptionValue = parser.value(customerEmailOption);
+        QString customerStateOptionValue = parser.value(customerStateOption);
+        QString customerZipOptionValue = parser.value(customerZipOption);
+        QString customerPhoneOptionValue = parser.value(customerPhoneOption);
+        QString customerMobileOptionValue = parser.value(customerMobileOption);
+        QString customerFaxOptionValue = parser.value(customerFaxOption);
+        QString customerCommentOptionValue = parser.value(customerCommentOption);
+        QString shipToNameOptionValue = parser.value(shipToNameOption);
+        QString shipToAddressOneOptionValue = parser.value(shipToAddressOneOption);
+        QString shipToAddressTwoOptionValue = parser.value(shipToAddressTwoOption);
+        QString shipToCityOptionValue = parser.value(shipToCityOption);
+        QString shipToEmailOptionValue = parser.value(shipToEmailOption);
+        QString shipToStateOptionValue = parser.value(shipToStateOption);
+        QString shipToZipOptionValue = parser.value(shipToZipOption);
+        QString shipToPhoneOptionValue = parser.value(shipToPhoneOption);
+        QString shipToMobileOptionValue = parser.value(shipToMobileOption);
+        QString shipToFaxOptionValue = parser.value(shipToFaxOption);
+        QString shipToCommentOptionValue = parser.value(shipToCommentOption);
+
+        std::string pathTargetFile = targetFileValue.toStdString();
+        std::string solidVersion = cv_document::get_solid_version(pathTargetFile);
+
+        cv_document * cvDocumentTarget = nullptr;
+        if(solidVersion == "8.142")
+        {
+            cvDocumentTarget = new cv_document_eight(pathTargetFile);
+        }
+        else if(solidVersion == "11.130")
+        {
+            cvDocumentTarget = new cv_document_eleven(pathTargetFile);
+        }
+        else
+        {
+            logMsg = "Did not recognize detected solid version. Got [" + QString::fromStdString(solidVersion) + "].\n" +
+                    "I can only work safely on solid versions I have been programmed for..";
+
+            helper::output_message(logMsg);
+            helper::write_to_information_log(logMsg);
+
+            return -5;
+        }
+
+        job_information newJobInformation = cvDocumentTarget->JobInformation;
+        newJobInformation.Number = joineryOptionValue.toStdString();
+        newJobInformation.PO = poOptionValue.toStdString();
+        newJobInformation.Description = descriptionOptionValue.toStdString();
+
+        newJobInformation.Customer.Name = customerNameOptionValue.toStdString();
+        newJobInformation.Customer.AddressA = customerAddressOneOptionValue.toStdString();
+        newJobInformation.Customer.AddressB = customerAddressTwoOptionValue.toStdString();
+        newJobInformation.Customer.City = customerCityOptionValue.toStdString();
+        newJobInformation.Customer.Email = customerEmailOptionValue.toStdString();
+        newJobInformation.Customer.State = customerStateOptionValue.toStdString();
+        newJobInformation.Customer.Zip = customerZipOptionValue.toStdString();
+        newJobInformation.Customer.Phone = customerPhoneOptionValue.toStdString();
+        newJobInformation.Customer.Mobile = customerMobileOptionValue.toStdString();
+        newJobInformation.Customer.Fax = customerFaxOptionValue.toStdString();
+        newJobInformation.Customer.Comment = customerCommentOptionValue.toStdString();
+
+        newJobInformation.ShipTo.Name = shipToNameOptionValue.toStdString();
+        newJobInformation.ShipTo.AddressA = shipToAddressOneOptionValue.toStdString();
+        newJobInformation.ShipTo.AddressB = shipToAddressTwoOptionValue.toStdString();
+        newJobInformation.ShipTo.City = shipToCityOptionValue.toStdString();
+        newJobInformation.ShipTo.Email = shipToEmailOptionValue.toStdString();
+        newJobInformation.ShipTo.State = shipToStateOptionValue.toStdString();
+        newJobInformation.ShipTo.Zip = shipToZipOptionValue.toStdString();
+        newJobInformation.ShipTo.Phone = shipToPhoneOptionValue.toStdString();
+        newJobInformation.ShipTo.Mobile = shipToMobileOptionValue.toStdString();
+        newJobInformation.ShipTo.Fax = shipToFaxOptionValue.toStdString();
+        newJobInformation.ShipTo.Comment = shipToCommentOptionValue.toStdString();
+
+        //TODO: Why the hell is this calling cv_document::get_data()????
+        cvDocumentTarget->save_job_information(newJobInformation);
+        cvDocumentTarget->save_cvj_file();
+
+        helper::output_message("Done...");
 
         return app.exec();
     }

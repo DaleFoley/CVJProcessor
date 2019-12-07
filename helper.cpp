@@ -16,6 +16,16 @@ void helper::write_to_error_log(QString msg)
     write_to_file(msg, "error.log");
 }
 
+bool helper::copy_over_existing_file(QString pathSource, QString pathTarget)
+{
+    if(QFile::exists(pathTarget))
+    {
+        QFile::remove(pathTarget);
+    }
+
+    return QFile::copy(pathSource, pathTarget);
+}
+
 void helper::write_to_file(QString msg, QString fileName)
 {
     msg = msg + "\n";
