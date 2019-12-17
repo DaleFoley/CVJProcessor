@@ -1,3 +1,17 @@
+//Copyright 2019 D Foley
+
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+
+//      http://www.apache.org/licenses/LICENSE-2.0
+
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 //TODO: Test file copy security, i.e what to do when we don't have permission to copy to specific path.
 
 #include <QCoreApplication>
@@ -15,6 +29,8 @@
 
 int main(int argc, char *argv[])
 {
+    const qint64 maxFileSize = 150000000;
+
     try
     {
         QCoreApplication app(argc, argv);
@@ -187,6 +203,18 @@ int main(int argc, char *argv[])
             helper::write_to_information_log(logMsg);
 
             return -3;
+        }        
+
+        qint64 sourceFileSize = QFile(sourceFileValue).size();
+        if(sourceFileSize > maxFileSize)
+        {
+            logMsg = "Can't copy source file with size [" + QString::number(sourceFileSize) +
+                    "] because it is larger than the allowed size [" + QString::number(maxFileSize) + "]";
+
+            helper::output_message(logMsg);
+            helper::write_to_information_log(logMsg);
+
+            return -4;
         }
 
         if(!helper::copy_over_existing_file(sourceFileValue, targetFileValue))
@@ -196,7 +224,7 @@ int main(int argc, char *argv[])
             helper::output_message(logMsg);
             helper::write_to_information_log(logMsg);
 
-            return -4;
+            return -5;
         }
 
         QString joineryOptionValue = parser.value(joineryOption);
@@ -228,25 +256,40 @@ int main(int argc, char *argv[])
         std::string pathTargetFile = targetFileValue.toStdString();
         std::string solidVersion = cv_document::get_solid_version(pathTargetFile);
 
+        QString solid8 = "8.142";
+        QString solid11 = "11.130";
         cv_document * cvDocumentTarget = nullptr;
-        if(solidVersion == "8.142")
+        if(solidVersion == solid8.toStdString())
         {
             cvDocumentTarget = new cv_document_eight(pathTargetFile);
+            logMsg = "Loaded target file [" + QString::fromStdString(pathTargetFile) + "] as solid version [" + solid8 + "]";
         }
-        else if(solidVersion == "11.130")
+        else if(solidVersion == solid11.toStdString())
         {
             cvDocumentTarget = new cv_document_eleven(pathTargetFile);
+            logMsg = "Loaded target file [" + QString::fromStdString(pathTargetFile) + "] as solid version [" + solid8 + "]";
         }
         else
         {
             logMsg = "Did not recognize detected solid version. Got [" + QString::fromStdString(solidVersion) + "].\n" +
-                    "I can only work safely on solid versions I have been programmed for..";
+                    "I can only work safely on solid versions I have been programmed for..\n\n" +
+                    "Known Versions:\n" + solid8 + "\n" + solid11;
 
             helper::output_message(logMsg);
             helper::write_to_information_log(logMsg);
 
-            return -5;
+            return -6;
         }
+
+        helper::output_message(logMsg);
+        helper::write_to_information_log(logMsg);
+
+        cvDocumentTarget->set_job_information();
+
+        logMsg = "Loaded job information from file [" + QString::fromStdString(pathTargetFile) + "]";
+
+        helper::output_message(logMsg);
+        helper::write_to_information_log(logMsg);
 
         job_information newJobInformation = cvDocumentTarget->JobInformation;
         newJobInformation.Number = joineryOptionValue.toStdString();
@@ -277,15 +320,26 @@ int main(int argc, char *argv[])
         newJobInformation.ShipTo.Fax = shipToFaxOptionValue.toStdString();
         newJobInformation.ShipTo.Comment = shipToCommentOptionValue.toStdString();
 
-        //TODO: Why the hell is this calling cv_document::get_data()????
         cvDocumentTarget->save_job_information(newJobInformation);
-        cvDocumentTarget->save_cvj_file();
+        logMsg = "Saved custom job information to file [" + QString::fromStdString(pathTargetFile) + "]";
 
-        helper::output_message("Done...");
+        helper::output_message(logMsg);
+        helper::write_to_information_log(logMsg);
+
+        cvDocumentTarget->save_cvj_file();
+        logMsg = "Saved CVJ file [" + QString::fromStdString(pathTargetFile) + "]";
+
+        helper::output_message(logMsg);
+        helper::write_to_information_log(logMsg);
+
+        logMsg = "Processing complete";
+
+        helper::output_message(logMsg);
+        helper::write_to_information_log(logMsg);
 
         return app.exec();
     }
-    catch(std::exception & e)
+    catch(std::exception& e)
     {
         helper::write_to_error_log(e.what());
     }
